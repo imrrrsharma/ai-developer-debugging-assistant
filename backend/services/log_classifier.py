@@ -48,17 +48,6 @@ _KNOWN_ERRORS = [
         ],
     },
     {
-        "pattern": re.compile(r"(Connection refused|could not connect|Unable to acquire JDBC|HikariPool.*connection|FATAL.*database)", re.I),
-        "error_type": "DatabaseConnectionError",
-        "quick_fixes": [
-            QuickFix(label="Check DB config", action="Verify spring.datasource.url, username, password in application.properties"),
-            QuickFix(label="Test connectivity", action="Run: psql -h <host> -U <user> -d <db> or equivalent CLI ping",
-                     command="psql -h localhost -U postgres -d mydb -c '\\conninfo'"),
-            QuickFix(label="Check DB is running", action="Run: systemctl status postgresql  or  docker ps | grep postgres",
-                     command="systemctl status postgresql"),
-        ],
-    },
-    {
         "pattern": re.compile(r"TimeoutException|Kafka.*timeout|org\.apache\.kafka.*TimeoutException", re.I),
         "error_type": "KafkaTimeoutError",
         "quick_fixes": [
@@ -67,6 +56,17 @@ _KNOWN_ERRORS = [
             QuickFix(label="Check Kafka broker health", action="Run: kafka-topics.sh --bootstrap-server localhost:9092 --list",
                      command="kafka-topics.sh --bootstrap-server localhost:9092 --list"),
             QuickFix(label="Verify network path", action="Ensure brokers are reachable from this host on port 9092"),
+        ],
+    },
+    {
+        "pattern": re.compile(r"(Connection refused|could not connect|Unable to acquire JDBC|HikariPool.*connection|FATAL.*database)", re.I),
+        "error_type": "DatabaseConnectionError",
+        "quick_fixes": [
+            QuickFix(label="Check DB config", action="Verify spring.datasource.url, username, password in application.properties"),
+            QuickFix(label="Test connectivity", action="Run: psql -h <host> -U <user> -d <db> or equivalent CLI ping",
+                     command="psql -h localhost -U postgres -d mydb -c '\\conninfo'"),
+            QuickFix(label="Check DB is running", action="Run: systemctl status postgresql  or  docker ps | grep postgres",
+                     command="systemctl status postgresql"),
         ],
     },
     {
