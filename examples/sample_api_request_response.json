@@ -1,0 +1,58 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "http://localhost:8000/api/v1/analyze-log",
+    "headers": { "Content-Type": "application/json" },
+    "body": {
+      "log_content": "2024-03-15 14:23:01.542 ERROR 18432 --- [main] o.s.boot.SpringApplication : Application run failed\n\njava.lang.OutOfMemoryError: Java heap space\n\tat java.util.ArrayList.grow(ArrayList.java:265)\n\tat com.example.service.ProductCacheService.loadAllProducts(ProductCacheService.java:87)",
+      "hint": "Spring Boot 3.1, deployed on AWS ECS with 512MB memory"
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "session_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "log_type": "java_spring",
+      "error_type": "OutOfMemoryError",
+      "root_cause": "The JVM heap ran out of memory while loading the entire product catalog into an in-memory ArrayList inside ProductCacheService.loadAllProducts(). The ECS task has only 512 MB allocated, which is insufficient for this eager-loading strategy.",
+      "explanation": "ProductCacheService attempts to load all products into memory during application startup via an in-memory ArrayList. With a large product catalog and only 512 MB ECS memory, the heap is exhausted before the Spring context finishes initializing. The ArrayList.grow() call in the stack trace confirms unbounded memory growth during bulk collection population. Because this happens during bean initialization, the entire application context fails to start.",
+      "fix_suggestions": [
+        "Implement lazy/paginated cache loading: load products in batches (e.g., 500 at a time) instead of all at once at startup",
+        "Increase the ECS task memory allocation to at least 2 GB and set -Xmx1536m accordingly",
+        "Replace the in-memory cache with Redis or Caffeine with an eviction policy to bound memory usage",
+        "Use @Lazy on ProductCacheService bean to defer loading until first access",
+        "Add a memory-aware circuit breaker that stops loading if free heap drops below a threshold"
+      ],
+      "severity": "CRITICAL",
+      "confidence": 0.93,
+      "possible_causes": [
+        "Entire product catalog loaded eagerly into an unbounded ArrayList on startup",
+        "ECS task memory limit (512 MB) too low for the dataset size",
+        "Missing JVM -Xmx setting, defaulting to a percentage of container memory that is too low",
+        "Memory leak in a prior request causing heap to be nearly exhausted before this startup"
+      ],
+      "quick_fixes": [
+        {
+          "label": "Increase heap size",
+          "action": "Increase JVM heap: -Xmx4g -Xms1g",
+          "command": "-Xmx4g -Xms1g"
+        },
+        {
+          "label": "Enable GC logging",
+          "action": "Add: -Xlog:gc* to diagnose memory pressure",
+          "command": "-Xlog:gc*"
+        },
+        {
+          "label": "Take heap dump",
+          "action": "Add: -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof",
+          "command": "-XX:+HeapDumpOnOutOfMemoryError"
+        }
+      ],
+      "highlighted_lines": [0, 2, 3, 4],
+      "service_name": "main",
+      "error_message": "Java heap space",
+      "processing_time_ms": 2341,
+      "model_used": "gpt-4o"
+    }
+  }
+}
