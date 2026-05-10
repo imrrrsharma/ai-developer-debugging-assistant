@@ -49,4 +49,4 @@ app.include_router(history.router)
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "model": settings.OPENAI_MODEL}
+    return {"status": "ok", "model": settings.OPENAI_MODEL, "provider": settings.LLM_BASE_URL or "openai"}

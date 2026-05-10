@@ -22,7 +22,10 @@ _client: Optional[AsyncOpenAI] = None
 def _get_client() -> AsyncOpenAI:
     global _client
     if _client is None:
-        _client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+        kwargs = {"api_key": settings.OPENAI_API_KEY}
+        if settings.LLM_BASE_URL:
+            kwargs["base_url"] = settings.LLM_BASE_URL
+        _client = AsyncOpenAI(**kwargs)
     return _client
 
 
@@ -91,7 +94,7 @@ async def analyze(
 async def _call_llm(user_prompt: str) -> tuple[Dict, int]:
     client = _get_client()
     try:
-        response = await client.chat.completions.create(
+        create_kwargs = dict(
             model=settings.OPENAI_MODEL,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
@@ -99,8 +102,10 @@ async def _call_llm(user_prompt: str) -> tuple[Dict, int]:
             ],
             max_tokens=settings.OPENAI_MAX_TOKENS,
             temperature=settings.OPENAI_TEMPERATURE,
-            response_format={"type": "json_object"},
         )
+        if settings.LLM_JSON_MODE:
+            create_kwargs["response_format"] = {"type": "json_object"}
+        response = await client.chat.completions.create(**create_kwargs)
         raw = response.choices[0].message.content or "{}"
         tokens = response.usage.total_tokens if response.usage else 0
         return _safe_parse(raw), tokens
